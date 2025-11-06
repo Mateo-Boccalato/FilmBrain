@@ -10,7 +10,8 @@ from typing import Dict, List, Tuple
 
 # Configuration
 CSV_PATH = "PRMoviesDB_updated_merged.csv"
-REVENUE_CAP = 120_000_000  # $120M cap
+REVENUE_CAP = 150_000_000  # $150M cap
+REVENUE_FLOOR = 0         # No floor
 SEED = 42
 np.random.seed(SEED)
 
@@ -140,10 +141,11 @@ df['is_major_studio'] = df['DIST.'].apply(
     lambda x: 1 if any(studio.lower() in str(x).lower() for studio in major_studios) else 0
 )
 
-# Clean and cap revenue
+# Clean and filter revenue
 print("\nPreparing target variable...")
 df['revenue'] = pd.to_numeric(df['revenue'], errors='coerce')
-df = df[df['revenue'].notna() & (df['revenue'] > 0)].copy()
+df = df[df['revenue'].notna() & (df['revenue'] > REVENUE_FLOOR)].copy()
+print(f"\nFiltered out movies below ${REVENUE_FLOOR/1e6:.3f}M")
 
 # Calculate studio and genre performance before capping
 studio_stats = calculate_rolling_stats(df, 'DIST.', 'revenue')
@@ -258,16 +260,24 @@ print(f"MAE: ${mae/1e6:.2f}M")
 print(f"SMAPE: {smape_score:.1f}%")
 
 # Analyze errors by revenue range
-ranges = [(0, 10e6), (10e6, 50e6), (50e6, 120e6)]
+ranges = [
+    (0, 1e6),        # $0 - $1M
+    (1e6, 10e6),     # $1M - $10M
+    (10e6, 50e6),    # $10M - $50M
+    (50e6, 100e6),   # $50M - $100M
+    (100e6, 150e6)   # $100M - $150M
+]
 print("\nError Analysis by Revenue Range:")
 for low, high in ranges:
     mask = (y_true >= low) & (y_true < high)
     if mask.any():
         range_smape = smape(y_true[mask], y_pred[mask])
+        range_rmse = np.sqrt(mean_squared_error(y_true[mask], y_pred[mask]))
         n_movies = mask.sum()
-        print(f"\n${low/1e6:.0f}M-${high/1e6:.0f}M range:")
+        print(f"\n${low/1e6:.1f}M-${high/1e6:.1f}M range:")
         print(f"- Number of movies: {n_movies} ({100*n_movies/len(y_true):.1f}% of test set)")
         print(f"- SMAPE: {range_smape:.1f}%")
+        print(f"- RMSE: ${range_rmse/1e6:.2f}M")
 
 # Feature importance analysis
 importance = pd.DataFrame({
