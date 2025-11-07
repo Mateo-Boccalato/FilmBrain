@@ -4,12 +4,10 @@ A machine learning project for predicting movie revenue using CatBoost regressio
 
 ## Project Structure
 
-- `train_refactored.py`: Main training script with feature engineering and model training
-- `train_improved.py`: Enhanced version with additional features and better parameter tuning
-- `train_simple.py`: Simplified version for testing and experimentation
+
+- `train_advanced.py`: Training Script using DB
 - `update_ratings.py`: Script for updating movie ratings
-- `ultimateGetter.py`: Data collection script
-- `mDGetter.py`: Additional data gathering utility
+- `mDGetter.py`: Additional data gathering utility: Calls both tmdb and rapidapi for differnt movie data points.
 
 ## Features
 
