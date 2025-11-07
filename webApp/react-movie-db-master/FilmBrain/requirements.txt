@@ -1,0 +1,8 @@
+requests
+python-dotenv
+lightgbm
+flask
+flask-cors
+catboost
+numpy
+pandas

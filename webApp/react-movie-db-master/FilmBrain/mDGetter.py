@@ -5,29 +5,16 @@ import argparse
 import json
 from dotenv import load_dotenv
 
-# Load environment variables from .env if present
 load_dotenv()
 
-# Load API credentials from environment variables
-TMDB_BEARER = os.getenv("TMDB_BEARER")
+TMDB_BEARER = os.getenv("TMDB_BEARER", "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0ODJkMzRiNTBlZGYxZDczYWVlMGE4ZWM5NDE1ODQxZiIsIm5iZiI6MTc0MDQ1MDk4MS4xNTY5OTk4LCJzdWIiOiI2N2JkMmNhNTEyYmZjODViYzM2YmU4ZWEiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.ic-usJWnrWXshJXy-VUGm7PFUw7IJaV0Jwf0M__cBeo")
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
 
-TMDB_HEADERS = {
-    "accept": "application/json",
-    "Authorization": f"Bearer {TMDB_BEARER}"
-}
-
-RAPIDAPI_HEADERS = {
-    "x-rapidapi-key": RAPIDAPI_KEY,
-    "x-rapidapi-host": "movies-ratings2.p.rapidapi.com"
-}
+TMDB_HEADERS = {"accept": "application/json", "Authorization": f"Bearer {TMDB_BEARER}"}
+RAPIDAPI_HEADERS = {"x-rapidapi-key": RAPIDAPI_KEY, "x-rapidapi-host": "movies-ratings2.p.rapidapi.com"}
 
 
 def search_movie_on_tmdb(title, include_adult=False, language="en-US", page=1):
-    """
-    Search TMDB for a movie title with optional filters.
-    Returns the first result's JSON.
-    """
     url = "https://api.themoviedb.org/3/search/movie"
     params = {
         "query": title,
@@ -45,9 +32,6 @@ def search_movie_on_tmdb(title, include_adult=False, language="en-US", page=1):
 
 
 def fetch_tmdb_movie_details(tmdb_id):
-    """
-    Fetch detailed TMDB info (including genres, runtime, budget, imdb_id).
-    """
     url = f"https://api.themoviedb.org/3/movie/{tmdb_id}"
     resp = requests.get(url, headers=TMDB_HEADERS)
     resp.raise_for_status()
@@ -55,10 +39,6 @@ def fetch_tmdb_movie_details(tmdb_id):
 
 
 def fetch_imdb_ratings(imdb_id):
-    """
-    Fetch IMDb-based ratings via RapidAPI (score, metascore, tomatometer, etc.).
-    Returns empty dict if no ratings available or on 404.
-    """
     if not imdb_id:
         return {}
     url = "https://movies-ratings2.p.rapidapi.com/ratings"
@@ -66,34 +46,25 @@ def fetch_imdb_ratings(imdb_id):
     try:
         resp = requests.get(url, headers=RAPIDAPI_HEADERS, params=params)
         resp.raise_for_status()
+        return resp.json()
     except requests.exceptions.HTTPError as e:
-        # If rating not found, return empty instead of error
         if e.response is not None and e.response.status_code == 404:
             return {}
-        # Other HTTP errors should bubble up
         raise
-    # Successful fetch — return the parsed JSON
-    try:
-        return resp.json()
     except ValueError:
         return {}
 
 
 def gather_movie_data(title):
-    """
-    Given a movie title, fetch and combine data from TMDB and IMDb (via RapidAPI).
-    Returns a dict of key movie features.
-    """
     tmdb_result = search_movie_on_tmdb(title)
     tmdb_id = tmdb_result.get("id")
     details = fetch_tmdb_movie_details(tmdb_id)
 
     imdb_id = details.get("imdb_id")
     ratings = fetch_imdb_ratings(imdb_id)
-    # Normalize RapidAPI ratings (they are nested under 'ratings')
     r = ratings.get('ratings', {}) if isinstance(ratings, dict) else {}
 
-    movie_data = {
+    return {
         "tmdb_id": tmdb_id,
         "imdb_id": imdb_id,
         "title": details.get("title"),
@@ -107,7 +78,6 @@ def gather_movie_data(title):
         "genres": [g.get("name") for g in details.get("genres", [])],
         "spoken_languages": [l.get("english_name") for l in details.get("spoken_languages", [])],
         "production_countries": [c.get("iso_3166_1") for c in details.get("production_countries", [])],
-        # IMDb/RapidAPI ratings (nested under ratings)
         "score": (r.get("imdb") or {}).get("score"),
         "reviewsCount": (r.get("imdb") or {}).get("reviewsCount"),
         "metascore": (r.get("metacritic") or {}).get("metascore"),
@@ -118,10 +88,8 @@ def gather_movie_data(title):
         "averageScore2": (r.get("rotten_tomatoes") or {}).get("averageScore"),
         "letterBoxd": (r.get("letterboxd") or {}).get("score"),
         "origin_country": (r.get("media") or {}).get("origin_country"),
-        # popularity isn't provided as a single top-level field; fall back to media.popularity if present
         "imdb_popularity": ratings.get("media", {}).get("popularity") if isinstance(ratings, dict) else None
     }
-    return movie_data
 
 
 if __name__ == "__main__":
