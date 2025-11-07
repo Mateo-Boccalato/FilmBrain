@@ -1,6 +1,6 @@
 # FilmBrain
 
-A comprehensive movie exploration platform combining a modern React frontend with machine learning-powered revenue predictions.
+A comprehensive movie exploration platform combining a modern React frontend with machine learning-powered revenue predictions using CatBoost regression.
 
 ## Features
 
@@ -106,3 +106,6 @@ Current metrics on test set:
 - Mobile application
 - Enhanced visualization of prediction metrics
 - Export and sharing capabilities
+- Ensemble modeling
+- Better handling of outliers
+- More sophisticated vote/rating features
